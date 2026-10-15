@@ -1,0 +1,1608 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>残響島：潮鎖の解錠</title>
+<style>
+:root{
+  --bg:#03060a;
+  --panel:#07111b;
+  --panel2:#0d1d2a;
+  --border:#24425d;
+  --text:#d8e8f3;
+  --muted:#89b0c8;
+  --accent:#ffd86a;
+  --accent2:#7ec8ff;
+}
+*{box-sizing:border-box}
+html,body{
+  height:100%;
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Hiragino Sans","Noto Sans JP",sans-serif;
+  overflow:hidden;
+  touch-action:manipulation;
+}
+#stage{
+  position:fixed;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#010305;
+}
+#game{
+  position:relative;
+  width:min(100vw, calc(100vh * 16 / 9));
+  height:min(100vh, calc(100vw * 9 / 16));
+  display:grid;
+  grid-template-rows:auto minmax(0,1fr) auto;
+  background:var(--panel);
+  border:1px solid #173046;
+  border-radius:10px;
+  overflow:hidden;
+  box-shadow:0 0 45px rgba(0,0,0,.85);
+}
+header{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  justify-content:space-between;
+  padding:6px 8px;
+  background:#0b1926;
+  border-bottom:1px solid var(--border);
+  min-height:42px;
+}
+#titleBox{
+  display:flex;
+  flex-direction:column;
+  min-width:0;
+  flex:1;
+}
+#uiTitle{
+  font-weight:800;
+  font-size:clamp(13px,2vw,19px);
+  color:#eef6ff;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+#uiSub{
+  font-size:clamp(9px,1.2vw,12px);
+  color:var(--muted);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.toolbar{
+  display:flex;
+  gap:4px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+button{
+  font:inherit;
+  color:#e6f3ff;
+  background:#163047;
+  border:1px solid #396184;
+  border-radius:8px;
+  padding:6px 7px;
+  cursor:pointer;
+  font-size:clamp(9px,1.3vw,13px);
+  line-height:1.1;
+}
+button:hover{background:#1d405f}
+button:active{transform:translateY(1px)}
+#sceneWrap{
+  position:relative;
+  background:#000;
+  overflow:hidden;
+}
+#scene{
+  width:100%;
+  height:100%;
+  display:block;
+}
+.hotspot{cursor:pointer}
+.hotspot:hover{
+  filter:drop-shadow(0 0 7px rgba(255,239,140,.85)) brightness(1.14);
+}
+.hit{
+  fill:#000;
+  fill-opacity:0;
+  pointer-events:all;
+}
+footer{
+  display:grid;
+  grid-template-columns:1fr;
+  background:#0a1722;
+  border-top:1px solid var(--border);
+}
+#inventory{
+  display:flex;
+  gap:6px;
+  padding:6px;
+  overflow-x:auto;
+  min-height:70px;
+  align-items:flex-start;
+  scrollbar-color:#396184 #0b1926;
+}
+.invbtn{
+  min-width:74px;
+  max-width:92px;
+  height:64px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:2px;
+  background:#102335;
+  border:1px solid #2b4d6a;
+}
+.invbtn svg{
+  width:34px;
+  height:34px;
+}
+.invbtn .nm{
+  font-size:10px;
+  color:#cfe2ef;
+  text-align:center;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  width:100%;
+  line-height:1.1;
+}
+#message{
+  padding:8px 10px;
+  min-height:40px;
+  text-align:center;
+  font-size:clamp(11px,1.6vw,16px);
+  line-height:1.25;
+  color:#f0f7ff;
+  background:#081521;
+  white-space:pre-wrap;
+  word-break:break-word;
+}
+#modal{
+  position:absolute;
+  inset:0;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  background:rgba(2,6,10,.86);
+  z-index:20;
+  padding:10px;
+}
+#modal.open{display:flex}
+.modalcard{
+  width:min(94%,780px);
+  max-height:92%;
+  overflow:auto;
+  background:var(--panel2);
+  border:1px solid #356184;
+  border-radius:12px;
+  padding:14px;
+}
+.modalcard h2{
+  margin:0 0 10px;
+  font-size:clamp(17px,3vw,26px);
+  color:var(--accent);
+}
+.modalbody{
+  font-size:clamp(12px,1.8vw,17px);
+  line-height:1.5;
+  white-space:pre-wrap;
+}
+.primary{
+  margin-top:12px;
+  background:#245b86;
+}
+@media (max-width:700px){
+  header{gap:4px}
+  .toolbar{gap:2px}
+  button{padding:4px 4px}
+  #inventory{min-height:62px}
+  .invbtn{min-width:62px;height:58px}
+}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="game">
+    <header>
+      <div id="titleBox">
+        <div id="uiTitle"></div>
+        <div id="uiSub"></div>
+      </div>
+      <div class="toolbar">
+        <button id="btnLang"></button>
+        <button id="btnSound"></button>
+        <button id="btnSave"></button>
+        <button id="btnLoad"></button>
+        <button id="btnMenu"></button>
+        <button id="btnFull"></button>
+      </div>
+    </header>
+
+    <div id="sceneWrap">
+      <svg id="scene" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+
+    <footer>
+      <div id="inventory"></div>
+      <div id="message"></div>
+    </footer>
+
+    <div id="modal"></div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+const SAVE_KEY = "tideglass_isle_save";
+const SETTINGS_KEY = "tideglass_isle_settings";
+
+const TEXTS = {
+  ja: {
+    ui: {
+      gameTitle:"残響島：潮鎖の解錠",
+      shortTitle:"残響島",
+      subtitle:"潮鎖の解錠",
+      start:"新規スタート",
+      "continue":"続きから始める",
+      save:"💾保存",
+      load:"📂読込",
+      menu:"☰タイトル",
+      full:"⛶全画面",
+      ok:"OK",
+      hint:"オブジェクトをタップ／クリックして調査"
+    },
+    items: {
+      shellShard:"鋭い貝殻",
+      smallKey:"鉄の鍵",
+      lantern:"ランタン",
+      rope:"ロープ",
+      goggles:"水中メガネ",
+      reedTube:"呼吸管",
+      tideKey:"潮の鍵",
+      crystalLens:"青いレンズ",
+      pearlKey:"真珠の鍵",
+      prismShard:"赤いプリズム",
+      tideLens:"潮ガラスのレンズ",
+      bottleMap:"瓶の地図"
+    },
+    msg: {
+      noSave:"セーブデータがありません。",
+      saved:"ローカルに保存しました。",
+      loaded:"セーブデータを読み込みました。",
+      already:"もう持っています。",
+      itemInfo:"{item}を持っている。",
+      pickup:"{item}を拾った。",
+      examine:"ここにはこれ以上なさそうだ。",
+      combine:"青いレンズと赤いプリズムが組み合わさり、潮ガラスのレンズになった。",
+      caveDarkShore:"洞窟は真っ暗だ。明かりが必要だ。",
+      caveDarkMsg:"真っ暗で何も見えない。ランタンが必要だ。",
+      lagoonBlocked:"通路が水で塞がれている。水位を下げなければならない。",
+      ruinsLocked:"遺跡の扉は閉ざされている。波型の鍵穴がある。",
+      lighthouseLocked:"灯台の扉は封じられている。遺跡の機構を解錠する必要がある。",
+      lighthouseWon:"灯台はすでに点灯している。",
+
+      boat:"難破したボートだ。船出には使えそうにない。",
+      drift:"流木。今は役に立たない。",
+      tidepoolEmpty:"潮だまりは空になっている。",
+      netNeed:"網で縛られた籠だ。鋭い刃が必要だ。",
+      netCut:"網を切った。中に小さな鉄の鍵がある。",
+      netDone:"切られた網の籠は空だ。",
+      chestNeed:"海の宝箱。鍵が必要なようだ。",
+      chestOpen:"宝箱が開いた。ストームランタンが出てきた。",
+      chestDone:"宝箱は空だ。",
+      bottle:"メッセージインボトルを拾った。島の一部と三つの石に関するメモが入っている。",
+
+      vineNeed:"蔓は頑丈すぎる。鋭いものが必要だ。",
+      vineCut:"蔓を切った。丈夫なロープが落ちてくる。",
+      vineDone:"切られた蔓には何も残っていない。",
+      packNeed:"キャンバス製の袋は縫い閉じられている。鋭いものだ。",
+      packCut:"袋の中に水中メガネを見つけた。",
+      packDone:"袋は空だ。",
+      shrine:"苔むした祠。『潮汐は光に応える』と刻まれている。",
+      camp:"昔誰かがキャンプをしていたようだ。火は冷えている。",
+
+      crystalTaken:"台座は空になっている。",
+      leverNeed:"石のレバーは重すぎる。引くための丈夫なロープが必要だ。",
+      leverDone:"レバーはすでに操作されている。",
+      leverPulled:"レバーにロープをかけて思い切り引いた。どこかで水が抜けていく。",
+      alcoveHidden:"石が倒れかかっており、奥を見られない。",
+      alcoveOpen:"奥の小部屋から、波型の鍵を見つけた。",
+      alcoveDone:"小部屋は空だ。",
+      caveNoLagoon:"水が下の通路を塞いでいる。",
+
+      reedPick:"中空の葦の管を拾った。水中で息をするのに使えるかもしれない。",
+      reedDone:"もう管はない。",
+      crateGoggles:"岩礁の底に何か沈んでいる。水中メガネがなければよく見えない。",
+      crateReed:"見えた。だが水中に潜る呼吸管が必要だ。",
+      crateDive:"潜って調べた。木箱は岩に引っかかって動かない。",
+      crateRope:"木箱は表に出たがまだ引っかかっている。ロープで引き寄せる必要がある。",
+      crateFree:"木箱を引き寄せた。中には真珠が嵌め込まれた鍵がある。",
+      crateDone:"木箱は空だ。",
+      reef:"小さな魚が珊瑚の間に散っていく。",
+
+      doorNeed:"波型の鍵穴。潮の鍵が必要だ。",
+      doorOpen:"潮の鍵が回った。石の扉がきしんで開く。",
+      doorDone:"扉はすでに開いている。",
+      tabletNeed:"古代文字で覆われている。解読の手がかりが要る。",
+      tabletClue:"瓶の地図と突き合わせた。石板の指示：左と中央を開、右を閉じる。",
+      tabletAgain:"指示を覚えている：左開、中央開、右閉。",
+      runeClick:"石が重く回った。",
+      runeSolved:"三つの石が一致した。奥から灯台へ続く隠し扉が開いた。",
+      runeSolvedDone:"石碑はそのまま揃っている。",
+      altarNeed:"祭壇には空のレンズ穴。澄んだ青いガラスを求めている。",
+      altarUsed:"青いレンズを置いた。光の筋が隠し区画を照らした。",
+      altarDone:"隠し区画はすでに開いている。",
+      prismDone:"もう何も残っていない。",
+      sarc:"石棺。動かしてはいけない気がする。",
+
+      keyNeedA:"波型の鍵穴が潮の鍵を待っている。",
+      keyA:"潮の鍵を灯台制御装置に挿した。",
+      keyADone:"潮の鍵はすでに差し込まれている。",
+      keyNeedB:"真珠型の鍵穴が真珠の鍵を待っている。",
+      keyB:"真珠の鍵が回る。隠し板がずれる。",
+      keyBDone:"真珠の鍵はすでに差し込まれている。",
+      lensNeed:"焦点リングは空だ。潮ガラスのレンズが必要だ。",
+      lensDone:"潮ガラスのレンズを焦点リングに設置した。",
+      lensSetDone:"レンズはすでに設置されている。",
+      activateNeed:"灯台はまだ不完全だ。"
+    },
+    story: {
+      intro:`あなたは見知らぬ浜で目を覚ました。小さなボートは壊れ、遠い崖の上の灯台だけが仄かに光っている。
+その周囲には透明な“潮ガラスの結界”があり、島への海路が封じられている。
+
+島に残された鍵、レンズ、機構を見つけ、灯台を起動して結界を破り、脱出しよう。
+
+オブジェクトをタップ／クリックして調査する。ゲームは自動でセーブされる。`,
+      win:`光が島を満たす。潮ガラスの結界は無害な霧となって砕け、水平線へ続く静かな海路が開いた。
+
+遊んでくれてありがとう。`
+    }
+  },
+  en: {
+    ui: {
+      gameTitle:"Echo Isle: Tideglass Lock",
+      shortTitle:"Echo Isle",
+      subtitle:"Tideglass Lock",
+      start:"New Game",
+      "continue":"Continue",
+      save:"💾Save",
+      load:"📂Load",
+      menu:"☰Title",
+      full:"⛶Full",
+      ok:"OK",
+      hint:"Tap or click objects to investigate"
+    },
+    items: {
+      shellShard:"Shell Shard",
+      smallKey:"Iron Key",
+      lantern:"Lantern",
+      rope:"Rope",
+      goggles:"Goggles",
+      reedTube:"Reed Tube",
+      tideKey:"Tide Key",
+      crystalLens:"Blue Lens",
+      pearlKey:"Pearl Key",
+      prismShard:"Red Prism",
+      tideLens:"Tideglass Lens",
+      bottleMap:"Message Bottle"
+    },
+    msg: {
+      noSave:"No save data found.",
+      saved:"Saved locally.",
+      loaded:"Saved data loaded.",
+      already:"You already have it.",
+      itemInfo:"You carry {item}.",
+      pickup:"You picked up {item}.",
+      examine:"There is nothing else here.",
+      combine:"The blue lens and red prism fit together, forming the Tideglass Lens.",
+      caveDarkShore:"The cave is pitch black. You need a light source.",
+      caveDarkMsg:"It is too dark to see. A lantern would help.",
+      lagoonBlocked:"The passage is flooded. The water must be lowered.",
+      ruinsLocked:"The ruins door is sealed. It has a wave-shaped keyhole.",
+      lighthouseLocked:"The lighthouse gate is locked. The ancient mechanism is not aligned.",
+      lighthouseWon:"The beacon is already shining.",
+
+      boat:"A wrecked boat. No sail, no oar. Better explore the island.",
+      drift:"Driftwood. Not useful right now.",
+      tidepoolEmpty:"The tidepool is empty.",
+      netNeed:"The net is tied tight. You need a sharp edge.",
+      netCut:"You cut the net. Inside is a small iron key.",
+      netDone:"The cut net is empty.",
+      chestNeed:"A sea chest. It seems locked.",
+      chestOpen:"The chest opens. A storm lantern is inside.",
+      chestDone:"The chest is empty.",
+      bottle:"You find a message in a bottle. It contains a map and a note about three stones.",
+
+      vineNeed:"The vines are too tough. You need something sharp.",
+      vineCut:"You cut the vine. A coil of strong rope falls free.",
+      vineDone:"The cut vine is bare.",
+      packNeed:"A canvas pack is sewn shut. You need something sharp.",
+      packCut:"Inside the pack: diving goggles.",
+      packDone:"The pack is empty.",
+      shrine:"A mossy shrine. It is carved: \"The tide answers the light.\"",
+      camp:"Someone camped here long ago. The fire is cold.",
+
+      crystalTaken:"The pedestal is empty.",
+      leverNeed:"The stone lever is too heavy. You need something strong to pull it.",
+      leverDone:"The lever has already been operated.",
+      leverPulled:"You tie the rope to the lever and heave. Somewhere below, water drains away.",
+      alcoveHidden:"A fallen stone blocks the alcove.",
+      alcoveOpen:"Inside the hidden alcove is a key shaped like a wave.",
+      alcoveDone:"The alcove is empty.",
+      caveNoLagoon:"Water blocks the lower passage.",
+
+      reedPick:"You pick up a hollow reed tube. It might help you breathe underwater.",
+      reedDone:"No more tubes.",
+      crateGoggles:"Something rests on the reef floor. Without goggles you cannot see it clearly.",
+      crateReed:"The crate is visible, but you need a breathing tube to dive.",
+      crateDive:"You dive and inspect the crate. It is jammed against a rock.",
+      crateRope:"The crate is exposed but caught tight. You need rope to haul it free.",
+      crateFree:"You pull the crate ashore. Inside: a pearl-inlaid key.",
+      crateDone:"The crate is empty.",
+      reef:"Small fish scatter among the coral.",
+
+      doorNeed:"The door has a wave-shaped keyhole. You need the tide key.",
+      doorOpen:"The tide key turns. The stone door grinds open.",
+      doorDone:"The door is already open.",
+      tabletNeed:"The tablet is covered in unreadable ancient runes.",
+      tabletClue:"You cross-check the message bottle. The tablet says: Left and Middle OPEN, Right CLOSED.",
+      tabletAgain:"You remember the clue: Left Open, Middle Open, Right Closed.",
+      runeClick:"The stone rotates with a heavy click.",
+      runeSolved:"The stones align. A hidden gate opens toward the lighthouse.",
+      runeSolvedDone:"The runes remain aligned.",
+      altarNeed:"An altar has an empty lens socket. It wants a clear blue glass.",
+      altarUsed:"You set the blue lens in place. A beam of light strikes a hidden compartment.",
+      altarDone:"The hidden compartment is already open.",
+      prismDone:"Nothing remains in the compartment.",
+      sarc:"A stone sarcophagus. You feel you should not disturb it.",
+
+      keyNeedA:"A wave-shaped keyhole waits for the tide key.",
+      keyA:"You insert the tide key into the beacon control.",
+      keyADone:"The tide key is already seated.",
+      keyNeedB:"A pearl-shaped lock waits for the pearl key.",
+      keyB:"The pearl key turns. A hidden plate slides aside.",
+      keyBDone:"The pearl key is already seated.",
+      lensNeed:"The focal ring is empty. It needs the Tideglass Lens.",
+      lensDone:"You mount the Tideglass Lens in the focal ring.",
+      lensSetDone:"The lens is already mounted.",
+      activateNeed:"The beacon mechanism is still incomplete."
+    },
+    story: {
+      intro:`You wake on a strange shore. Your small boat is wrecked behind you, and a lighthouse on the far cliff glows faintly.
+
+A transparent “Tideglass” barrier seals the sea road around the island.
+
+Find the keys, lenses, and mechanisms hidden across the island. Activate the beacon, break the Tideglass lock, and escape.
+
+Tap or click objects to investigate. The game saves automatically.`,
+      win:`Light floods Echo Isle. The Tideglass barrier shatters into harmless mist, and a calm sea road opens to the horizon.
+
+Thanks for playing.`
+    }
+  }
+};
+
+const ITEM_ICONS = {
+  shellShard: '<path d="M9 24 L16 5 L23 24 Z" fill="#d9e6ea" stroke="#73828a" stroke-width="1.5"/>',
+  smallKey: '<path d="M12 20h14v-3H12v-2h-2v5zM24 14a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0-2a3 3 0 1 1 0-6 3 3 0 0 1 0 6z" fill="#c5ccd6"/>',
+  lantern: '<path d="M12 4h8v3H12zM10 7h12v3H10zM12 11h8v14h-8zM14 25h4v3h-4z" fill="#f4d58d"/><path d="M13 15h6M13 18h6" stroke="#7e5a26" stroke-width="1.5"/>',
+  rope: '<path d="M7 7q10 4 0 10q-10 4 0 10" fill="none" stroke="#c69f68" stroke-width="4"/>',
+  goggles: '<circle cx="11" cy="16" r="6" fill="#8ed1ff" stroke="#111"/><circle cx="21" cy="16" r="6" fill="#8ed1ff" stroke="#111"/><rect x="16" y="14" width="4" height="4" fill="#111"/>',
+  reedTube: '<rect x="8" y="10" width="16" height="7" rx="3" fill="#79b86b"/><rect x="10" y="12" width="12" height="2" fill="#e9f6e6"/>',
+  tideKey: '<path d="M12 20h14v-3H12v-2h-2v5zM24 14a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0-2a3 3 0 1 1 0-6 3 3 0 0 1 0 6z" fill="#6fc3df"/><path d="M4 8q6-6 12 0" stroke="#6fc3df" stroke-width="2" fill="none"/>',
+  crystalLens: '<circle cx="16" cy="16" r="9" fill="#39c7ff" opacity=".88"/><path d="M9 12 L23 12 L16 24 Z" fill="#d8fbff"/>',
+  pearlKey: '<path d="M12 20h14v-3H12v-2h-2v5zM24 14a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0-2a3 3 0 1 1 0-6 3 3 0 0 1 0 6z" fill="#d7b3a0"/><circle cx="10" cy="10" r="4" fill="#fff7ea"/>',
+  prismShard: '<path d="M8 24 L16 4 L24 24 Z" fill="#ff6b6b" opacity=".92"/>',
+  tideLens: '<circle cx="16" cy="16" r="9" fill="#7ef0ff" opacity=".92"/><path d="M10 14 L22 14 L16 24 Z" fill="#ff8a8a"/>',
+  bottleMap: '<rect x="12" y="8" width="8" height="18" rx="3" fill="#245c5c"/><rect x="14" y="12" width="4" height="10" fill="#e9e0b0"/><rect x="11" y="5" width="10" height="4" rx="1" fill="#7a3b2a"/>'
+};
+
+function defaultFlags(){
+  return {
+    gotShell:false,
+    gotSmallKey:false,
+    cutNet:false,
+    openedChest:false,
+    gotBottle:false,
+    gotRope:false,
+    gotGoggles:false,
+    gotReed:false,
+    pulledLever:false,
+    gotCrystal:false,
+    gotTideKey:false,
+    crateExposed:false,
+    gotPearl:false,
+    openedRuins:false,
+    readRunes:false,
+    r1:0,
+    r2:0,
+    r3:0,
+    runesSolved:false,
+    usedCrystalAltar:false,
+    gotPrism:false,
+    lockA:false,
+    lockB:false,
+    lensSet:false,
+    win:false
+  };
+}
+
+const initialLang = (navigator.language || "en").toLowerCase().startsWith("ja") ? "ja" : "en";
+
+let S = {
+  scene:"title",
+  inv:[],
+  flags:defaultFlags(),
+  lang:initialLang,
+  sound:true
+};
+
+const sceneEl = document.getElementById("scene");
+const invEl = document.getElementById("inventory");
+const messageEl = document.getElementById("message");
+const modalEl = document.getElementById("modal");
+
+let audioCtx = null;
+
+function esc(s){
+  return String(s)
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;");
+}
+
+function getNested(obj, path){
+  return path.split(".").reduce((o,k)=>o ? o[k] : undefined, obj);
+}
+
+function t(key, params={}){
+  let s = getNested(TEXTS[S.lang], key);
+  if (s === undefined) s = getNested(TEXTS[S.lang === "ja" ? "en" : "ja"], key);
+  if (typeof s !== "string") return key;
+  for (const [k,v] of Object.entries(params)) {
+    s = s.split("{" + k + "}").join(String(v));
+  }
+  return s;
+}
+
+function itemName(id){ return t("items." + id); }
+
+function say(key, params={}){
+  messageEl.textContent = t(key, params);
+}
+
+function saveSettings(){
+  try {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify({lang:S.lang, sound:S.sound}));
+  } catch(e){}
+}
+
+function loadSettings(){
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if (!raw) return;
+    const d = JSON.parse(raw);
+    if (d.lang) S.lang = d.lang;
+    if (typeof d.sound === "boolean") S.sound = d.sound;
+  } catch(e){}
+}
+
+function saveQuiet(){
+  if (S.scene !== "title") {
+    try {
+      const payload = {
+        scene:S.scene,
+        inv:S.inv,
+        flags:S.flags,
+        lang:S.lang,
+        sound:S.sound
+      };
+      localStorage.setItem(SAVE_KEY, JSON.stringify(payload));
+    } catch(e){}
+  }
+  saveSettings();
+}
+
+function load(){
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return false;
+    const d = JSON.parse(raw);
+    S = {
+      scene: d.scene || "title",
+      inv: Array.isArray(d.inv) ? d.inv : [],
+      flags: Object.assign(defaultFlags(), d.flags || {}),
+      lang: d.lang || S.lang,
+      sound: typeof d.sound === "boolean" ? d.sound : S.sound
+    };
+    saveSettings();
+    return true;
+  } catch(e){
+    return false;
+  }
+}
+
+function saveExists(){
+  try {
+    return !!localStorage.getItem(SAVE_KEY);
+  } catch(e){
+    return false;
+  }
+}
+
+function startNew(){
+  const lang = S.lang;
+  const sound = S.sound;
+  S = {
+    scene:"shore",
+    inv:[],
+    flags:defaultFlags(),
+    lang,
+    sound
+  };
+  saveQuiet();
+  render();
+  showModal(t("ui.gameTitle"), t("story.intro"), t("ui.ok"));
+}
+
+function showModal(title, body, buttonLabel){
+  modalEl.innerHTML =
+    '<div class="modalcard"><h2>' + esc(title) + '</h2>' +
+    '<div class="modalbody">' + esc(body).replace(/\n/g,"<br>") + '</div>' +
+    '<button class="primary" id="modalOk">' + esc(buttonLabel) + '</button></div>';
+  modalEl.classList.add("open");
+  const btn = document.getElementById("modalOk");
+  if (btn) {
+    btn.addEventListener("click", () => {
+      modalEl.classList.remove("open");
+      modalEl.innerHTML = "";
+    });
+  }
+}
+
+function hasItem(id){
+  return S.inv.includes(id);
+}
+
+function removeItem(id){
+  S.inv = S.inv.filter(x => x !== id);
+}
+
+function addItemRaw(id){
+  if (hasItem(id)) return false;
+  S.inv.push(id);
+  playSound("pickup");
+  tryCombine();
+  return true;
+}
+
+function tryCombine(){
+  if (hasItem("crystalLens") && hasItem("prismShard") && !hasItem("tideLens")) {
+    removeItem("crystalLens");
+    removeItem("prismShard");
+    S.inv.push("tideLens");
+    playSound("success");
+    say("msg.combine");
+  }
+}
+
+function commit(){
+  saveQuiet();
+  render();
+}
+
+function ensureAudio(){
+  if (!audioCtx) {
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) audioCtx = new AC();
+    } catch(e){
+      audioCtx = null;
+    }
+  }
+  if (audioCtx && audioCtx.state === "suspended") {
+    audioCtx.resume().catch(()=>{});
+  }
+}
+
+function tone(freq, offset=0, dur=0.12, type="square", vol=0.05){
+  if (!S.sound || !audioCtx) return;
+  const now = audioCtx.currentTime + offset;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, now);
+  gain.gain.setValueAtTime(0, now);
+  gain.gain.linearRampToValueAtTime(vol, now + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start(now);
+  osc.stop(now + dur + 0.05);
+}
+
+function playSound(kind){
+  if (!S.sound) return;
+  ensureAudio();
+  if (!audioCtx) return;
+
+  switch(kind){
+    case "click":
+      tone(430,0,.045,"triangle",.025);
+      break;
+    case "pickup":
+      tone(560,0,.07,"square",.035);
+      tone(820,.07,.07,"square",.025);
+      break;
+    case "unlock":
+      tone(260,0,.10,"sawtooth",.045);
+      tone(480,.10,.10,"sawtooth",.035);
+      tone(880,.20,.12,"triangle",.03);
+      break;
+    case "door":
+      tone(180,0,.14,"sawtooth",.035);
+      tone(130,.14,.16,"sawtooth",.03);
+      break;
+    case "success":
+      tone(523,0,.09,"triangle",.04);
+      tone(659,.09,.09,"triangle",.04);
+      tone(784,.18,.12,"triangle",.035);
+      break;
+    case "win":
+      tone(523,0,.18,"triangle",.05);
+      tone(659,.18,.18,"triangle",.05);
+      tone(784,.36,.22,"triangle",.05);
+      tone(1046,.58,.45,"triangle",.045);
+      break;
+    default:
+      tone(400,0,.04,"square",.02);
+      break;
+  }
+}
+
+function H(id, body){
+  return '<g class="hotspot" data-id="' + id + '"><title>' + esc(id) + '</title>' + body + '</g>';
+}
+
+function nav(id, x, y, dir){
+  const arrow = dir === "left" ? "←" : dir === "right" ? "→" : dir === "up" ? "▲" : "▼";
+  return `<g class="hotspot nav" data-id="${id}"><rect x="${x-65}" y="${y-38}" width="130" height="76" rx="18" fill="rgba(255,222,112,.18)" stroke="#ffdf78" stroke-width="4"/><text x="${x}" y="${y+14}" text-anchor="middle" font-size="42" fill="#fff">${arrow}</text></g>`;
+}
+
+function menuButton(id, x, y, label){
+  return `<g class="hotspot menuBtn" data-id="${id}"><rect x="${x}" y="${y}" width="380" height="64" rx="14" fill="#173553" stroke="#7db4e6" stroke-width="3"/><text x="${x+190}" y="${y+42}" text-anchor="middle" font-size="28" fill="#e8f6ff">${esc(label)}</text></g>`;
+}
+
+function itemSVG(id){
+  return '<svg viewBox="0 0 32 32" aria-hidden="true">' + (ITEM_ICONS[id] || '<rect x="8" y="8" width="16" height="16" fill="#889"/>') + '</svg>';
+}
+
+function runePillar(index, x){
+  const key = "r" + index;
+  const on = Number(S.flags[key]) === 1;
+  const symbol = on
+    ? `<circle cx="${x}" cy="500" r="18" fill="#20303a" stroke="#8ce6ff" stroke-width="3"/><circle cx="${x}" cy="500" r="5" fill="#fff"/>`
+    : `<line x1="${x-18}" y1="500" x2="${x+18}" y2="500" stroke="#8ce6ff" stroke-width="3"/>`;
+  return H("ruins_rune" + index, `
+    <rect x="${x-46}" y="455" width="92" height="215" fill="#57584e" stroke="#2b2c27" stroke-width="3"/>
+    <rect x="${x-32}" y="470" width="64" height="42" fill="#42433a"/>
+    ${symbol}
+  `);
+}
+
+function sceneTitle(){
+  const has = saveExists();
+  const start = menuButton("title_start", 610, 430, t("ui.start"));
+  const cont = has ? menuButton("title_continue", 610, 510, t("ui.continue")) : "";
+  return `
+  <defs>
+    <linearGradient id="titleSky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#02070d"/><stop offset=".55" stop-color="#14375a"/><stop offset="1" stop-color="#225d82"/>
+    </linearGradient>
+    <radialGradient id="titleGlow" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#ffe9a8" stop-opacity=".85"/><stop offset="1" stop-color="#ffe9a8" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1600" height="900" fill="#020407"/>
+  <rect width="1600" height="680" fill="url(#titleSky)"/>
+  <rect y="680" width="1600" height="220" fill="#06131f"/>
+  <circle cx="1290" cy="155" r="55" fill="#eef1d8" opacity=".55"/>
+  <circle cx="1290" cy="155" r="125" fill="url(#titleGlow)"/>
+  <path d="M0,700 L280,650 L560,690 L830,640 L1150,685 L1600,645 L1600,900 L0,900 Z" fill="#081119"/>
+  <path d="M730,700 L775,520 L820,700 Z" fill="#0c1722"/>
+  <rect x="743" y="520" width="34" height="120" fill="#101b24"/>
+  <rect x="738" y="505" width="44" height="22" fill="#172430"/>
+  <circle cx="760" cy="515" r="12" fill="#ffd86a"/>
+  <circle cx="760" cy="515" r="70" fill="url(#titleGlow)"/>
+  <text x="800" y="250" text-anchor="middle" font-size="105" font-weight="900" fill="#f4f8ff" style="paint-order:stroke" stroke="#02101d" stroke-width="10">${esc(t("ui.shortTitle"))}</text>
+  <text x="800" y="325" text-anchor="middle" font-size="46" fill="#b9e2ff">${esc(t("ui.subtitle"))}</text>
+  <text x="800" y="610" text-anchor="middle" font-size="20" fill="#9ab7cb">${esc(t("ui.hint"))}</text>
+  ${start}
+  ${cont}
+  `;
+}
+
+function sceneShore(){
+  const f = S.flags;
+  return `
+  <defs>
+    <linearGradient id="shSky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#071c31"/><stop offset="1" stop-color="#4c86a7"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="#070c12"/>
+  <rect width="1600" height="520" fill="url(#shSky)"/>
+  <rect y="520" width="1600" height="170" fill="#155e7e"/>
+  <path d="M0,680 Q380,560 800,650 T1600,620 L1600,900 L0,900 Z" fill="#c7a576"/>
+  <path d="M0,730 Q430,640 820,730 T1600,710 L1600,900 L0,900 Z" fill="#d5b17d"/>
+  <circle cx="115" cy="115" r="42" fill="#f5f1c4" opacity=".55"/>
+
+  ${H("shore_cave", `
+    <path d="M0,540 L220,515 L280,760 L0,760 Z" fill="#192a34"/>
+    <ellipse cx="115" cy="650" rx="78" ry="105" fill="#020307"/>
+    <path d="M70,635 Q115,585 160,635" fill="none" stroke="#2b3d47" stroke-width="6"/>
+    <text x="120" y="790" text-anchor="middle" fill="#33424b" font-size="22">Cave</text>
+  `)}
+
+  ${H("shore_boat", `
+    <path d="M320,700 L540,700 L490,765 L370,765 Z" fill="#6d4c37"/>
+    <rect x="405" y="590" width="10" height="115" fill="#8b6b49"/>
+    <path d="M415,600 L520,645 L415,655 Z" fill="#efe8d4" opacity=".75"/>
+    <text x="430" y="800" text-anchor="middle" fill="#6f5a41" font-size="22">Wreck</text>
+  `)}
+
+  <ellipse cx="650" cy="745" rx="115" ry="50" fill="#0f3c57" stroke="#0a2b3f" stroke-width="3"/>
+  ${f.gotShell ? "" : H("shore_shell", `
+    <path d="M650,710 L628,752 L672,752 Z" fill="#f6dede" stroke="#c29a9a" stroke-width="2"/>
+    <path d="M640,718 L660,718 L650,734 Z" fill="#fff" opacity=".8"/>
+  `)}
+
+  ${f.cutNet ? `
+    <rect x="1060" y="695" width="140" height="90" rx="8" fill="#6a4f33"/>
+    <path d="M1070,740 L1190,735" stroke="#d23b3b" stroke-width="5"/>
+  ` : H("shore_net", `
+    <rect x="1060" y="695" width="140" height="90" rx="8" fill="#7d5d3b" stroke="#35271c" stroke-width="3"/>
+    <path d="M1060,725 H1200 M1060,755 H1200 M1092,695 V785 M1124,695 V785 M1156,695 V785" stroke="#b49c7a" stroke-width="2"/>
+    <text x="1130" y="810" text-anchor="middle" fill="#70573f" font-size="20">Net</text>
+  `)}
+
+  ${f.openedChest ? `
+    <rect x="1280" y="700" width="150" height="90" rx="8" fill="#654b36"/>
+    <path d="M1280,700 L1430,655 L1430,685 L1280,715 Z" fill="#7b5a3d"/>
+    <text x="1355" y="815" text-anchor="middle" fill="#5f4936" font-size="20">Empty</text>
+  ` : H("shore_chest", `
+    <rect x="1280" y="700" width="150" height="90" rx="8" fill="#8b6b49" stroke="#35271c" stroke-width="3"/>
+    <path d="M1280,725 H1430 M1280,755 H1430" stroke="#5b442e" stroke-width="4"/>
+    <rect x="1345" y="718" width="18" height="30" rx="3" fill="#d9b36c"/>
+    <circle cx="1354" cy="733" r="5" fill="#221b10"/>
+    <text x="1355" y="815" text-anchor="middle" fill="#68513b" font-size="20">Chest</text>
+  `)}
+
+  ${f.gotBottle ? "" : H("shore_bottle", `
+    <rect x="850" y="795" width="24" height="55" rx="8" fill="#245c5c" opacity=".9"/>
+    <rect x="857" y="805" width="10" height="30" fill="#e9e0b0"/>
+    <rect x="847" y="788" width="30" height="9" rx="3" fill="#7a3b2a"/>
+    <path d="M862,775 L862,788" stroke="#5f887a" stroke-width="3"/>
+  `)}
+
+  ${H("shore_drift", `
+    <path d="M480,820 L575,795 L635,830 L555,845 Z" fill="#7b5a41"/>
+    <path d="M500,818 L585,805 L620,826 L550,836 Z" fill="#8f6a4e"/>
+  `)}
+
+  ${nav("shore_jungle", 1510, 450, "right")}
+  `;
+}
+
+function sceneJungle(){
+  const f = S.flags;
+  return `
+  <defs>
+    <linearGradient id="jgSky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#061c16"/><stop offset="1" stop-color="#16432e"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="#061009"/>
+  <rect width="1600" height="700" fill="url(#jgSky)"/>
+  <path d="M0,700 Q400,640 800,700 T1600,680 L1600,900 L0,900 Z" fill="#203c25"/>
+  <path d="M120,700 Q430,120 760,700 Z" fill="#142b1c"/>
+  <path d="M700,700 Q1080,100 1420,700 Z" fill="#183624"/>
+  <ellipse cx="280" cy="650" rx="180" ry="70" fill="#0e2016"/>
+  <ellipse cx="1280" cy="650" rx="210" ry="85" fill="#0e2016"/>
+  <rect x="0" y="820" width="1600" height="80" fill="#1a2f1d"/>
+
+  ${f.gotRope ? `
+    <path d="M780,0 L780,190" stroke="#3f7047" stroke-width="9"/>
+  ` : H("jungle_vine", `
+    <path d="M780,0 L780,185" stroke="#4b7f53" stroke-width="9"/>
+    <path d="M780,185 q-45,35 0,70" fill="none" stroke="#3b6b45" stroke-width="9"/>
+    <path d="M715,245 q35,-15 60,10" fill="none" stroke="#a97c4e" stroke-width="8"/>
+    <path d="M740,250 q25,-8 45,8" fill="none" stroke="#c8a370" stroke-width="4"/>
+    <text x="780" y="330" text-anchor="middle" fill="#a57c52" font-size="22">Rope</text>
+  `)}
+
+  ${f.gotGoggles ? `
+    <rect x="260" y="695" width="155" height="95" rx="12" fill="#3e3a2c" opacity=".45"/>
+  ` : H("jungle_pack", `
+    <rect x="260" y="695" width="155" height="95" rx="12" fill="#3e3a2c" stroke="#15140f" stroke-width="4"/>
+    <path d="M280,720 H395 M280,750 H395 M310,700 V785 M345,700 V785" stroke="#655b41" stroke-width="3"/>
+    <text x="337" y="815" text-anchor="middle" fill="#6d664a" font-size="20">Pack</text>
+  `)}
+
+  ${H("jungle_shrine", `
+    <rect x="1170" y="635" width="140" height="125" fill="#6f7166" stroke="#2f312c" stroke-width="4"/>
+    <path d="M1182,660 h116 v12 h-116 z" fill="#a39d88"/>
+    <circle cx="1240" cy="730" r="13" fill="#8fd08b"/>
+    <text x="1240" y="790" text-anchor="middle" fill="#878a7f" font-size="20">Shrine</text>
+  `)}
+
+  ${H("jungle_camp", `
+    <circle cx="860" cy="770" r="58" fill="#2d2620"/>
+    <circle cx="860" cy="770" r="32" fill="#111"/>
+    <path d="M805,760 L915,770 M815,790 L905,745" stroke="#433b31" stroke-width="6"/>
+  `)}
+
+  ${H("jungle_cave", `
+    <path d="M1350,530 L1600,555 L1600,760 L1350,760 Z" fill="#111b21"/>
+    <ellipse cx="1475" cy="650" rx="95" ry="112" fill="#010204"/>
+    <path d="M1400,630 Q1475,570 1545,630" fill="none" stroke="#263641" stroke-width="6"/>
+    <text x="1475" y="795" text-anchor="middle" fill="#33424b" font-size="22">Cave</text>
+  `)}
+
+  ${nav("jungle_shore", 90, 450, "left")}
+  `;
+}
+
+function sceneCave(){
+  if (!hasItem("lantern")) {
+    return `
+    <rect width="1600" height="900" fill="#010204"/>
+    ${H("cave_dark", '<rect class="hit" x="0" y="0" width="1600" height="900"/>')}
+    ${nav("cave_shore", 110, 450, "left")}
+    <text x="800" y="520" text-anchor="middle" fill="#28323c" font-size="34">...too dark...</text>
+    `;
+  }
+
+  const f = S.flags;
+  return `
+  <defs>
+    <linearGradient id="caveBack" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0b1116"/><stop offset="1" stop-color="#1b2b35"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#caveBack)"/>
+  <path d="M0,0 L1600,0 L1600,900 L0,900 Z" fill="none" stroke="#2a424f" stroke-width="8"/>
+  <path d="M0,650 Q400,540 800,650 T1600,640 L1600,900 L0,900 Z" fill="#17262e"/>
+  <circle cx="780" cy="730" r="320" fill="#f7d782" opacity=".08"/>
+
+  <path d="M160,0 L240,180 L120,330 L300,460" fill="none" stroke="#243945" stroke-width="10"/>
+  <path d="M1350,0 L1280,180 L1400,340" fill="none" stroke="#243945" stroke-width="10"/>
+
+  <rect x="650" y="500" width="190" height="80" fill="#2d3f4a"/>
+  <rect x="700" y="430" width="90" height="80" fill="#36515f"/>
+  ${f.gotCrystal ? "" : H("cave_crystal", `
+    <circle cx="745" cy="395" r="34" fill="#39c7ff" opacity=".9"/>
+    <path d="M715,380 L775,380 L745,430 Z" fill="#dffaff"/>
+    <text x="745" y="330" text-anchor="middle" fill="#7dd7ff" font-size="20">Lens</text>
+  `)}
+
+  ${f.pulledLever ? `
+    <rect x="1080" y="470" width="200" height="70" fill="#2d3f4a"/>
+    <path d="M1130,470 L1200,330 L1250,345 L1180,470 Z" fill="#707c6d"/>
+    <text x="1180" y="600" text-anchor="middle" fill="#6b8b95" font-size="22">Drained</text>
+  ` : H("cave_lever", `
+    <rect x="1080" y="470" width="200" height="70" fill="#354a57"/>
+    <rect x="1135" y="290" width="28" height="200" fill="#707c6d"/>
+    <circle cx="1149" cy="280" r="26" fill="#92a18f" stroke="#2f352e" stroke-width="4"/>
+    <text x="1180" y="600" text-anchor="middle" fill="#7d97a3" font-size="22">Lever</text>
+  `)}
+
+  ${f.pulledLever && !f.gotTideKey ? H("cave_alcove", `
+    <path d="M1320,330 L1480,330 L1500,520 L1300,520 Z" fill="#151f26"/>
+    <path d="M1395,420 L1370,480 L1430,480 Z" fill="#6fc3df"/>
+    <path d="M1385,430 L1405,430 L1395,450 Z" fill="#dff8ff"/>
+    <text x="1400" y="570" text-anchor="middle" fill="#74b7d5" font-size="22">Alcove</text>
+  `) : ""}
+
+  ${f.pulledLever ? "" : `
+    <path d="M1180,700 Q1300,620 1600,670 L1600,900 L1180,900 Z" fill="#16536f" opacity=".85"/>
+  `}
+
+  ${nav("cave_shore", 110, 450, "left")}
+  ${nav("cave_lagoon", 1510, 450, "right")}
+  `;
+}
+
+function sceneLagoon(){
+  const f = S.flags;
+  return `
+  <defs>
+    <linearGradient id="lagSky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#061d2f"/><stop offset="1" stop-color="#1f6b8d"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="#050a10"/>
+  <rect width="1600" height="560" fill="url(#lagSky)"/>
+  <rect y="560" width="1600" height="340" fill="#104a67"/>
+  <path d="M0,600 Q400,540 820,610 T1600,570 L1600,900 L0,900 Z" fill="#0a2e42" opacity=".95"/>
+  <path d="M180,780 Q360,710 620,800 Q520,850 180,820 Z" fill="#7eaa4d"/>
+  <path d="M1220,800 Q1420,730 1590,790 L1590,860 L1230,860 Z" fill="#558e67"/>
+  <circle cx="135" cy="770" r="42" fill="#7eaa4d"/>
+  <circle cx="148" cy="760" r="42" fill="#88b755"/>
+  <circle cx="161" cy="778" r="42" fill="#72a045"/>
+  <circle cx="174" cy="768" r="42" fill="#7eaa4d"/>
+  <circle cx="187" cy="786" r="42" fill="#66963d"/>
+
+  <path d="M0,860 L1600,860 L1600,900 L0,900 Z" fill="#091e2b"/>
+  <path d="M1260,560 L1600,560 L1600,900 L1260,900 Z" fill="#101b23"/>
+
+  ${f.gotReed ? "" : H("lagoon_reed", `
+    <rect x="180" y="650" width="18" height="115" rx="7" fill="#79b86b"/>
+    <rect x="183" y="670" width="12" height="4" fill="#e9f6e6"/>
+    <text x="190" y="790" text-anchor="middle" fill="#82b76d" font-size="20">Tube</text>
+  `)}
+
+  <ellipse cx="850" cy="800" rx="170" ry="72" fill="#073b52" opacity=".85"/>
+  ${f.gotPearl ? "" : (f.crateExposed ? H("lagoon_crate", `
+    <rect x="790" y="720" width="120" height="80" rx="8" fill="#7b5a3d" stroke="#2b2117" stroke-width="4"/>
+    <path d="M790,745 H910 M790,775 H910 M830,720 V800 M870,720 V800" stroke="#51402f" stroke-width="3"/>
+    <path d="M810,680 L775,650 M860,680 L905,650" stroke="#7b6a4e" stroke-width="5"/>
+    <text x="850" y="850" text-anchor="middle" fill="#7a5f45" font-size="22">Crate</text>
+  `) : H("lagoon_crate", `
+    <circle cx="850" cy="770" r="95" fill="none" stroke="#1a5f78" stroke-width="5" opacity=".45"/>
+    <text x="850" y="850" text-anchor="middle" fill="#2c6d87" font-size="22">Dive</text>
+  `))}
+
+  ${H("lagoon_reef", `
+    <path d="M1120,790 L1180,720 L1240,800 L1170,840 Z" fill="#558e67"/>
+    <path d="M1150,770 L1200,735" stroke="#7cc79d" stroke-width="5"/>
+    <circle cx="1065" cy="775" r="14" fill="#42c7d8"/>
+    <circle cx="1100" cy="755" r="11" fill="#ff9d76"/>
+  `)}
+
+  ${H("lagoon_ruinsDoor", f.openedRuins ? `
+    <path d="M1310,570 L1450,570 L1470,870 L1290,870 Z" fill="#152029"/>
+    <path d="M1330,610 L1440,610 L1455,840 L1315,840 Z" fill="#05070a"/>
+    <text x="1380" y="545" text-anchor="middle" fill="#6d8390" font-size="22">Open</text>
+  ` : `
+    <path d="M1310,570 L1450,570 L1470,870 L1290,870 Z" fill="#3f454d"/>
+    <path d="M1330,610 L1440,610 L1455,840 L1315,840 Z" fill="#2c3138"/>
+    <path d="M1370,720 q25,-28 50,0 q-25,28 -50,0" fill="#74d3ef"/>
+    <text x="1380" y="910" text-anchor="middle" fill="#8497a2" font-size="20">Ruins</text>
+  `)}
+
+  ${nav("lagoon_cave", 90, 450, "left")}
+  `;
+}
+
+function sceneRuins(){
+  const f = S.flags;
+  return `
+  <defs>
+    <linearGradient id="ruinsBack" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0e1722"/><stop offset="1" stop-color="#2a3138"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#ruinsBack)"/>
+  <path d="M0,740 L1600,740 L1600,900 L0,900 Z" fill="#222930"/>
+  <rect x="140" y="300" width="1320" height="480" fill="#2d343c" stroke="#57616b" stroke-width="4"/>
+  <path d="M140,300 L800,160 L1460,300 Z" fill="#313942"/>
+  <rect x="210" y="360" width="120" height="300" fill="#3b444d"/>
+  <rect x="1270" y="360" width="120" height="300" fill="#3b444d"/>
+
+  ${H("ruins_tablet", `
+    <rect x="250" y="405" width="170" height="220" fill="#3c434c" stroke="#6b7782" stroke-width="4"/>
+    <path d="M275,445 H395 M275,485 H395 M275,525 H365 M275,565 H385" stroke="#9fb0bb" stroke-width="5"/>
+    <text x="335" y="660" text-anchor="middle" fill="#8d9aa4" font-size="20">Tablet</text>
+  `)}
+
+  ${runePillar(1, 560)}
+  ${runePillar(2, 800)}
+  ${runePillar(3, 1040)}
+
+  <rect x="1180" y="560" width="210" height="150" fill="#353d46" stroke="#67727d" stroke-width="4"/>
+  <rect x="1245" y="500" width="80" height="60" fill="#424b56"/>
+  ${f.usedCrystalAltar ? `
+    <circle cx="1285" cy="520" r="22" fill="#39c7ff" opacity=".85"/>
+    <path d="M1200,540 L1370,540" stroke="#8fe7ff" stroke-width="8" opacity=".7"/>
+    <path d="M1310,650 L1380,650 L1380,720 L1310,720 Z" fill="#1c232a"/>
+  ` : H("ruins_altar", `
+    <circle cx="1285" cy="520" r="22" fill="#1c232a" stroke="#7d8791" stroke-width="4"/>
+    <text x="1285" y="755" text-anchor="middle" fill="#8d9aa4" font-size="20">Altar</text>
+  `)}
+
+  ${f.usedCrystalAltar && !f.gotPrism ? H("ruins_prism", `
+    <path d="M1325,660 L1365,700 L1325,700 Z" fill="#ff6b6b"/>
+    <path d="M1335,675 L1355,695 L1335,695 Z" fill="#ffd0d0"/>
+    <text x="1355" y="645" text-anchor="middle" fill="#ff8c8c" font-size="20">Prism</text>
+  `) : ""}
+
+  ${H("ruins_sarc", `
+    <path d="M430,700 L640,700 L610,780 L460,780 Z" fill="#494d42"/>
+    <ellipse cx="535" cy="712" rx="78" ry="14" fill="#5e6255"/>
+  `)}
+
+  ${f.runesSolved ? `
+    <path d="M1360,360 L1500,360 L1520,700 L1340,700 Z" fill="#152029"/>
+    <path d="M1380,410 L1490,410 L1500,670 L1370,670 Z" fill="#05070a"/>
+    <text x="1430" y="335" text-anchor="middle" fill="#74e7ff" font-size="22">Open</text>
+  ` : `
+    <rect x="1360" y="360" width="150" height="330" fill="#41484f" stroke="#68727c" stroke-width="4"/>
+    <circle cx="1435" cy="520" r="32" fill="none" stroke="#8ce6ff" stroke-width="6" opacity=".55"/>
+    <path d="M1405,520 h60" stroke="#8ce6ff" stroke-width="6" opacity=".55"/>
+  `}
+
+  ${nav("ruins_lagoon", 90, 450, "left")}
+  ${nav("ruins_lighthouse", 1525, 250, "right")}
+  `;
+}
+
+function sceneLighthouse(){
+  const f = S.flags;
+  const canWin = f.lockA && f.lockB && f.lensSet;
+  return `
+  <defs>
+    <linearGradient id="lhBack" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#050b12"/><stop offset="1" stop-color="#162435"/>
+    </linearGradient>
+    <radialGradient id="lhGlow" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#fff0a8" stop-opacity=".85"/><stop offset="1" stop-color="#fff0a8" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#lhBack)"/>
+  <circle cx="800" cy="220" r="170" fill="url(#lhGlow)" opacity="${f.win ? 1 : 0.22}"/>
+
+  <rect x="170" y="210" width="1260" height="520" rx="22" fill="#1d2c3a" stroke="#3d5d76" stroke-width="6"/>
+  <path d="M170,260 H1430 M170,310 H1430" stroke="#2c475b" stroke-width="5"/>
+
+  ${f.lockA ? `
+    <circle cx="420" cy="470" r="34" fill="#6fc3df"/>
+    <path d="M400,450 L440,450 L420,500 Z" fill="#dff8ff"/>
+  ` : H("lh_keyA", `
+    <circle cx="420" cy="470" r="34" fill="#0b1620" stroke="#6fc3df" stroke-width="5"/>
+    <path d="M392,470 q28,-28 56,0" fill="none" stroke="#6fc3df" stroke-width="5"/>
+    <path d="M392,470 q28,28 56,0" fill="none" stroke="#6fc3df" stroke-width="5"/>
+    <text x="420" y="570" text-anchor="middle" fill="#6fc3df" font-size="20">Tide Key</text>
+  `)}
+
+  ${f.lockB ? `
+    <circle cx="760" cy="470" r="34" fill="#d7b3a0"/>
+    <circle cx="760" cy="470" r="16" fill="#fff7ea"/>
+  ` : H("lh_keyB", `
+    <circle cx="760" cy="470" r="34" fill="#0b1620" stroke="#d7b3a0" stroke-width="5"/>
+    <circle cx="760" cy="470" r="12" fill="none" stroke="#d7b3a0" stroke-width="4"/>
+    <text x="760" y="570" text-anchor="middle" fill="#d7b3a0" font-size="20">Pearl Key</text>
+  `)}
+
+  ${f.lensSet ? `
+    <circle cx="1080" cy="470" r="74" fill="#7ef0ff" opacity=".35"/>
+    <circle cx="1080" cy="470" r="52" fill="#7ef0ff" opacity=".8"/>
+    <path d="M1035,450 L1125,450 L1080,520 Z" fill="#ff8a8a"/>
+  ` : H("lh_lens", `
+    <circle cx="1080" cy="470" r="74" fill="none" stroke="#8ce6ff" stroke-width="6"/>
+    <circle cx="1080" cy="470" r="42" fill="none" stroke="#8ce6ff" stroke-width="3" stroke-dasharray="10 8"/>
+    <text x="1080" y="585" text-anchor="middle" fill="#8ce6ff" font-size="20">Focal Ring</text>
+  `)}
+
+  ${f.win ? `
+    <path d="M690,700 L910,700 L910,735 L690,735 Z" fill="#2d6b4e"/>
+    <path d="M785,590 L835,590 L825,720 L795,720 Z" fill="#73c78d"/>
+    <circle cx="810" cy="590" r="34" fill="#9be7ae"/>
+  ` : H("lh_activate", `
+    <rect x="690" y="700" width="220" height="35" rx="6" fill="${canWin ? "#8a6b2e" : "#2c3a4a"}"/>
+    <path d="M795,590 L825,590 L815,720 L805,720 Z" fill="${canWin ? "#ffd86a" : "#4a6376"}"/>
+    <circle cx="810" cy="590" r="34" fill="${canWin ? "#ffe58a" : "#6a8699"}" stroke="${canWin ? "#fff" : "#30404e"}" stroke-width="5"/>
+    <text x="800" y="790" text-anchor="middle" fill="#d7e4f0" font-size="22">Beacon Lever</text>
+  `)}
+
+  ${nav("lh_ruins", 105, 450, "left")}
+  `;
+}
+
+const SCENES = {
+  title: sceneTitle,
+  shore: sceneShore,
+  jungle: sceneJungle,
+  cave: sceneCave,
+  lagoon: sceneLagoon,
+  ruins: sceneRuins,
+  lighthouse: sceneLighthouse
+};
+
+function tryGo(to){
+  if (to === "cave" && !hasItem("lantern")) {
+    say("msg.caveDarkShore");
+    return false;
+  }
+  if (to === "lagoon" && !S.flags.pulledLever) {
+    say("msg.lagoonBlocked");
+    return false;
+  }
+  if (to === "ruins" && !S.flags.openedRuins) {
+    say("msg.ruinsLocked");
+    return false;
+  }
+  if (to === "lighthouse" && !S.flags.runesSolved) {
+    say("msg.lighthouseLocked");
+    return false;
+  }
+  S.scene = to;
+  playSound("door");
+  commit();
+  return true;
+}
+
+function rotateRune(index){
+  if (S.flags.runesSolved) {
+    say("msg.runeSolvedDone");
+    return;
+  }
+  const key = "r" + index;
+  S.flags[key] = ((Number(S.flags[key]) || 0) + 1) % 2;
+  playSound("click");
+  if (Number(S.flags.r1) === 1 && Number(S.flags.r2) === 1 && Number(S.flags.r3) === 0) {
+    S.flags.runesSolved = true;
+    playSound("unlock");
+    say("msg.runeSolved");
+  } else {
+    say("msg.runeClick");
+  }
+  commit();
+}
+
+const actions = {
+  title_start(){ startNew(); },
+  title_continue(){
+    if (load()) {
+      say("msg.loaded");
+      render();
+    } else {
+      say("msg.noSave");
+    }
+  },
+
+  shore_shell(){
+    if (S.flags.gotShell) return say("msg.tidepoolEmpty");
+    S.flags.gotShell = true;
+    addItemRaw("shellShard");
+    say("msg.pickup", {item:itemName("shellShard")});
+    commit();
+  },
+  shore_net(){
+    if (S.flags.cutNet) return say("msg.netDone");
+    if (!hasItem("shellShard")) return say("msg.netNeed");
+    S.flags.cutNet = true;
+    addItemRaw("smallKey");
+    S.flags.gotSmallKey = true;
+    playSound("unlock");
+    say("msg.netCut");
+    commit();
+  },
+  shore_chest(){
+    if (S.flags.openedChest) return say("msg.chestDone");
+    if (!hasItem("smallKey")) return say("msg.chestNeed");
+    S.flags.openedChest = true;
+    addItemRaw("lantern");
+    playSound("unlock");
+    say("msg.chestOpen");
+    commit();
+  },
+  shore_bottle(){
+    if (S.flags.gotBottle) return say("msg.examine");
+    S.flags.gotBottle = true;
+    addItemRaw("bottleMap");
+    say("msg.bottle");
+    commit();
+  },
+  shore_boat(){ playSound("click"); say("msg.boat"); },
+  shore_drift(){ playSound("click"); say("msg.drift"); },
+  shore_cave(){
+    if (!hasItem("lantern")) return say("msg.caveDarkShore");
+    tryGo("cave");
+  },
+  shore_jungle(){ tryGo("jungle"); },
+
+  jungle_vine(){
+    if (S.flags.gotRope) return say("msg.vineDone");
+    if (!hasItem("shellShard")) return say("msg.vineNeed");
+    S.flags.gotRope = true;
+    addItemRaw("rope");
+    playSound("unlock");
+    say("msg.vineCut");
+    commit();
+  },
+  jungle_pack(){
+    if (S.flags.gotGoggles) return say("msg.packDone");
+    if (!hasItem("shellShard")) return say("msg.packNeed");
+    S.flags.gotGoggles = true;
+    addItemRaw("goggles");
+    playSound("unlock");
+    say("msg.packCut");
+    commit();
+  },
+  jungle_shrine(){ playSound("click"); say("msg.shrine"); },
+  jungle_camp(){ playSound("click"); say("msg.camp"); },
+  jungle_cave(){
+    if (!hasItem("lantern")) return say("msg.caveDarkShore");
+    tryGo("cave");
+  },
+  jungle_shore(){ tryGo("shore"); },
+
+  cave_dark(){
+    if (!hasItem("lantern")) say("msg.caveDarkMsg");
+  },
+  cave_shore(){ tryGo("shore"); },
+  cave_crystal(){
+    if (S.flags.gotCrystal) return say("msg.crystalTaken");
+    S.flags.gotCrystal = true;
+    addItemRaw("crystalLens");
+    say("msg.pickup", {item:itemName("crystalLens")});
+    commit();
+  },
+  cave_lever(){
+    if (S.flags.pulledLever) return say("msg.leverDone");
+    if (!hasItem("rope")) return say("msg.leverNeed");
+    S.flags.pulledLever = true;
+    playSound("unlock");
+    say("msg.leverPulled");
+    commit();
+  },
+  cave_alcove(){
+    if (!S.flags.pulledLever) return say("msg.alcoveHidden");
+    if (S.flags.gotTideKey) return say("msg.alcoveDone");
+    S.flags.gotTideKey = true;
+    addItemRaw("tideKey");
+    playSound("unlock");
+    say("msg.alcoveOpen");
+    commit();
+  },
+  cave_lagoon(){
+    if (!S.flags.pulledLever) return say("msg.caveNoLagoon");
+    tryGo("lagoon");
+  },
+
+  lagoon_reed(){
+    if (S.flags.gotReed) return say("msg.reedDone");
+    S.flags.gotReed = true;
+    addItemRaw("reedTube");
+    playSound("unlock");
+    say("msg.reedPick");
+    commit();
+  },
+  lagoon_crate(){
+    if (S.flags.gotPearl) return say("msg.crateDone");
+    if (!S.flags.crateExposed) {
+      if (!hasItem("goggles")) return say("msg.crateGoggles");
+      if (!hasItem("reedTube")) return say("msg.crateReed");
+      S.flags.crateExposed = true;
+      playSound("success");
+      say("msg.crateDive");
+      commit();
+      return;
+    }
+    if (!hasItem("rope")) return say("msg.crateRope");
+    S.flags.gotPearl = true;
+    addItemRaw("pearlKey");
+    playSound("unlock");
+    say("msg.crateFree");
+    commit();
+  },
+  lagoon_reef(){ playSound("click"); say("msg.reef"); },
+  lagoon_ruinsDoor(){
+    if (S.flags.openedRuins) {
+      tryGo("ruins");
+      return;
+    }
+    if (!hasItem("tideKey")) return say("msg.doorNeed");
+    S.flags.openedRuins = true;
+    playSound("unlock");
+    say("msg.doorOpen");
+    commit();
+  },
+  lagoon_cave(){ tryGo("cave"); },
+
+  ruins_lagoon(){ tryGo("lagoon"); },
+  ruins_lighthouse(){ tryGo("lighthouse"); },
+  ruins_tablet(){
+    if (S.flags.readRunes) {
+      say("msg.tabletAgain");
+      return;
+    }
+    if (!hasItem("bottleMap")) return say("msg.tabletNeed");
+    S.flags.readRunes = true;
+    playSound("success");
+    say("msg.tabletClue");
+    commit();
+  },
+  ruins_rune1(){ rotateRune(1); },
+  ruins_rune2(){ rotateRune(2); },
+  ruins_rune3(){ rotateRune(3); },
+  ruins_altar(){
+    if (S.flags.usedCrystalAltar) return say("msg.altarDone");
+    if (!hasItem("crystalLens")) return say("msg.altarNeed");
+    S.flags.usedCrystalAltar = true;
+    playSound("success");
+    say("msg.altarUsed");
+    commit();
+  },
+  ruins_prism(){
+    if (S.flags.gotPrism) return say("msg.prismDone");
+    S.flags.gotPrism = true;
+    const added = addItemRaw("prismShard");
+    if (added && !hasItem("tideLens")) {
+      say("msg.pickup", {item:itemName("prismShard")});
+    }
+    commit();
+  },
+  ruins_sarc(){ playSound("click"); say("msg.sarc"); },
+
+  lh_ruins(){ tryGo("ruins"); },
+  lh_keyA(){
+    if (S.flags.lockA) return say("msg.keyADone");
+    if (!hasItem("tideKey")) return say("msg.keyNeedA");
+    S.flags.lockA = true;
+    playSound("unlock");
+    say("msg.keyA");
+    commit();
+  },
+  lh_keyB(){
+    if (S.flags.lockB) return say("msg.keyBDone");
+    if (!hasItem("pearlKey")) return say("msg.keyNeedB");
+    S.flags.lockB = true;
+    playSound("unlock");
+    say("msg.keyB");
+    commit();
+  },
+  lh_lens(){
+    if (S.flags.lensSet) return say("msg.lensSetDone");
+    if (!hasItem("tideLens")) return say("msg.lensNeed");
+    S.flags.lensSet = true;
+    playSound("success");
+    say("msg.lensDone");
+    commit();
+  },
+  lh_activate(){
+    if (S.flags.win) return say("msg.lighthouseWon");
+    if (!S.flags.lockA || !S.flags.lockB || !S.flags.lensSet) {
+      say("msg.activateNeed");
+      return;
+    }
+    S.flags.win = true;
+    saveQuiet();
+    render();
+    playSound("win");
+    showModal(t("ui.gameTitle"), t("story.win"), t("ui.ok"));
+  }
+};
+
+function renderInventory(){
+  invEl.innerHTML = "";
+  S.inv.forEach(id => {
+    const b = document.createElement("button");
+    b.className = "invbtn";
+    b.innerHTML = itemSVG(id) + '<div class="nm">' + esc(itemName(id)) + "</div>";
+    b.addEventListener("click", () => {
+      ensureAudio();
+      playSound("click");
+      say("msg.itemInfo", {item:itemName(id)});
+    });
+    invEl.appendChild(b);
+  });
+}
+
+function updateLabels(){
+  document.title = t("ui.gameTitle");
+  document.getElementById("uiTitle").textContent = t("ui.shortTitle");
+  document.getElementById("uiSub").textContent = t("ui.subtitle");
+  document.getElementById("btnLang").textContent = S.lang === "ja" ? "English" : "日本語";
+  document.getElementById("btnSound").textContent = S.sound ? "🔊 ON" : "🔇 OFF";
+  document.getElementById("btnSave").textContent = t("ui.save");
+  document.getElementById("btnLoad").textContent = t("ui.load");
+  document.getElementById("btnMenu").textContent = t("ui.menu");
+  document.getElementById("btnFull").textContent = t("ui.full");
+}
+
+function render(){
+  updateLabels();
+  const fn = SCENES[S.scene] || sceneTitle;
+  sceneEl.innerHTML = fn();
+  renderInventory();
+}
+
+function wireHeaderButtons(){
+  document.getElementById("btnLang").addEventListener("click", () => {
+    S.lang = S.lang === "ja" ? "en" : "ja";
+    saveQuiet();
+    render();
+    say(S.lang === "ja" ? "言語を日本語に切り替えました。" : "Language switched to English.");
+  });
+
+  document.getElementById("btnSound").addEventListener("click", () => {
+    S.sound = !S.sound;
+    if (S.sound) ensureAudio();
+    saveQuiet();
+    updateLabels();
+    playSound("click");
+  });
+
+  document.getElementById("btnSave").addEventListener("click", () => {
+    ensureAudio();
+    if (S.scene === "title") {
+      say("msg.noSave");
+      return;
+    }
+    saveQuiet();
+    playSound("success");
+    say("msg.saved");
+  });
+
+  document.getElementById("btnLoad").addEventListener("click", () => {
+    ensureAudio();
+    if (load()) {
+      playSound("success");
+      say("msg.loaded");
+      render();
+    } else {
+      playSound("click");
+      say("msg.noSave");
+    }
+  });
+
+  document.getElementById("btnMenu").addEventListener("click", () => {
+    ensureAudio();
+    playSound("door");
+    S.scene = "title";
+    render();
+  });
+
+  document.getElementById("btnFull").addEventListener("click", () => {
+    ensureAudio();
+    playSound("click");
+    try {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen && document.documentElement.requestFullscreen();
+      } else {
+        document.exitFullscreen && document.exitFullscreen();
+      }
+    } catch(e){}
+  });
+}
+
+function wireSceneEvents(){
+  sceneEl.addEventListener("click", (ev) => {
+    ensureAudio();
+    const g = ev.target.closest("[data-id]");
+    if (!g) {
+      if (S.scene === "cave" && !hasItem("lantern")) say("msg.caveDarkMsg");
+      return;
+    }
+    const id = g.dataset.id;
+    playSound("click");
+    if (typeof actions[id] === "function") {
+      actions[id]();
+    } else {
+      say("msg.examine");
+    }
+  });
+}
+
+function init(){
+  loadSettings();
+  wireHeaderButtons();
+  wireSceneEvents();
+  render();
+}
+
+init();
+</script>
+</body>
+</html>
